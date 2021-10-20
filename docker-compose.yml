@@ -2,41 +2,33 @@ version: '3'
 
 services:
   jupyterhub:
-    build: jupyterhub
-    image: jupyterhub_img
+    image: jckoester/jupyterhub-docker:latest
     container_name: jupyterhub
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - jupyterhub_data:/srv/jupyterhub
+      - hub_data:/srv/jupyterhub
     environment:
-      - DOCKER_JUPYTER_CONTAINER=jupyterlab_img
-      - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}_default
+      - DOCKER_JUPYTER_CONTAINER
+      - DOCKER_NETWORK_NAME=jupyterhub_default
       - HUB_IP=jupyterhub
       - HOST
-    labels:
-      - "traefik.enable=true"
-      - "traefik.frontend.rule=Host:${HOST}"
-    restart: on-failure
+      - OAUTH2_CALLBACK_URL
+      - OAUTH2_CLIENT_ID
+      - OAUTH2_CLIENT_SECRET
+      - OAUTH2_TOKEN_URL
+      - OAUTH2_AUTHORIZE_URL
+      - OAUTH2_USERDATA_URL
+      - OAUTH2_USERDATA_REQUEST_TYPE
+      - OAUTH2_USERNAME_KEY
 
+    restart: on-failure
+    ports:
+      - 9002:8000
   jupyterlab:
-    build: jupyterlab
-    image: jupyterlab_img
-    container_name: jupyterlab-throaway
+    image: jupyter/scipy-notebook
+    container_name: jupyterlab-throwaway
     network_mode: none
     command: echo
 
-  reverse-proxy:
-    image: traefik
-    container_name: reverse-proxy
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
-    volumes:
-      - ./reverse-proxy/traefik.toml:/etc/traefik/traefik.toml
-      - /etc/certs:/etc/certs
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: on-failure
-
 volumes:
-  jupyterhub_data:
+  hub_data:
