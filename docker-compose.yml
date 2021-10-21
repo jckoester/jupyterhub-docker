@@ -9,8 +9,8 @@ services:
       - hub_data:/srv/jupyterhub
     environment:
       - DOCKER_JUPYTER_CONTAINER
-      - DOCKER_NETWORK_NAME=jupyterhub_default
-      - HUB_IP=jupyterhub
+      - DOCKER_NETWORK_NAME=jupyterhub_jupyter
+      - HUB_IP=jupyterhub_hub
       - HOST
       - OAUTH2_CALLBACK_URL
       - OAUTH2_CLIENT_ID
@@ -20,15 +20,23 @@ services:
       - OAUTH2_USERDATA_URL
       - OAUTH2_USERDATA_REQUEST_TYPE
       - OAUTH2_USERNAME_KEY
-
     restart: on-failure
     ports:
       - 9002:8000
+    networks:
+      default:
+      jupyter:
+        aliases:
+          - jupyterhub_hub
   jupyterlab:
-    image: jupyter/scipy-notebook
+    image: jckoester/jupyterlab-ggd:v1
     container_name: jupyterlab-throwaway
     network_mode: none
     command: echo
 
 volumes:
   hub_data:
+  
+networks:
+  jupyter:
+    internal: true
