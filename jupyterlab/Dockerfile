@@ -47,3 +47,6 @@ RUN conda install --quiet --yes \
     ipykernel
 # and create the new environment for jupyterlab
 RUN python -m ipykernel install --user --name chatterbot_py37 --display-name="Chatterbot (Python 3.7)"
+
+# Add hook to load environments
+COPY ./activate_envs.sh /usr/local/bin/before-notebook.d/
