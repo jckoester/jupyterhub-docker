@@ -1,6 +1,6 @@
-FROM jupyter/scipy-notebook:137a295ff71b
+FROM jupyter/scipy-notebook:latest
 
-LABEL maintainer="Luca De Feo <https://defeo.lu/>"
+LABEL maintainer="Jan Köster <https://www.gymnasium-ditzingen.de/>"
 
 USER root
 
@@ -8,60 +8,42 @@ USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     fonts-dejavu \
-    tzdata \
-    gfortran \
-    gcc \
-    scilab \
-    pari-gp \
-    libpari-dev \
-    sagemath \
-    sagemath-jupyter \
-    libgmp-dev \
-    && apt-get clean && \
+    tzdata && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 USER $NB_UID
 
-# Conda packages
-# Sage conflicts with the latest jupyterhub, thus we must relax the pinning
+# RUN pip install \
+    # jupyterlab-language-pack-de-DE
+
+# Conda installs
 RUN conda install --quiet --yes \
-    'r-base=3.4.1' \
-    'r-irkernel=0.8*' \
-    'r-plyr=1.8*' \
-    'r-devtools=1.13*' \
-    'r-tidyverse=1.1*' \
-    'r-shiny=1.0*' \
-    'r-rmarkdown=1.8*' \
-    'r-forecast=8.2*' \
-    'r-rsqlite=2.0*' \
-    'r-reshape2=1.4*' \
-    'r-nycflights13=0.2*' \
-    'r-caret=6.0*' \
-    'r-rcurl=1.95*' \
-    'r-crayon=1.3*' \
-    'r-randomforest=4.6*' \
-    'r-htmltools=0.3*' \
-    'r-sparklyr=0.7*' \
-    'r-htmlwidgets=1.0*' \
-    'r-hexbin=1.27*' \
-    'jupyterhub' \
-#    'sage=8.*' \
-    'julia=1.0*' && \
-    conda clean -tipsy && \
-    fix-permissions $CONDA_DIR
+    jupyterhub \
+    jupyterlab
+# Install German language pack for jupyterlab
+RUN conda install -c conda-forge jupyterlab-language-pack-de-DE
 
-ENV CPATH=$CONDA_DIR/include
 
+# We create a complete environment for chatterbot, it will appear in jupyterlab as a separate notebook type
+# That way we can add different environments later without dependecy problems!
+
+
+# Create a conda/python environment for chatterbot as it requires python 3.7
+RUN conda create -n chatterbot_py37 --yes python=3.7
+# Make RUN commands use the new environment:
+SHELL ["conda", "run", "-n", "chatterbot_py37", "/bin/bash", "-c"]
+# Install chatterbot and spacy 2.3.5 (as chatterbot 1.0.8 is incompatible with spacy 3.x)
 RUN pip install \
-    pari_jupyter \
-#    PySingular jupyter_kernel_singular \
-    scilab-kernel && \
-    fix-permissions $CONDA_DIR
+     chatterbot \
+     chatterbot-corpus \
+     spacy==2.3.5
+# Install spacy language models
+RUN  python -m spacy download en
+RUN  python -m spacy download de
 
-# Fix SageMath kernel
-USER root
-RUN sed -i 's/"\/usr\/bin\/sage"/"env", "PATH=\/usr\/local\/sbin:\/usr\/local\/bin:\/usr\/sbin:\/usr\/bin:\/sbin:\/bin", "\/usr\/bin\/sage"/' /usr/share/jupyter/kernels/sagemath/kernel.json
-USER $NB_UID
-
-# Add conda env hook
-COPY ./conda-activate.sh /usr/local/bin/before-notebook.d/
+# Install ipykernel
+RUN conda install --quiet --yes \
+    ipykernel
+# and create the new environment for jupyterlab
+RUN python -m ipykernel install --user --name chatterbot_py37 --display-name="Chatterbot (Python 3.7)"
